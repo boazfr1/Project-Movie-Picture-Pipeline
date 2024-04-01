@@ -1,0 +1,97 @@
+name: 'Project-Movie-Picture-Pipeline-CI-frontend'
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'frontend/**'
+
+env:
+  AWS_REGION : "us-east-1"
+
+permissions:
+      id-token: write
+      contents: read
+
+jobs:
+  linting-frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js 
+        uses: actions/setup-node@v3
+        with:
+          node-version: latest
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies and run the linter
+        run: cd frontend && npm install && npm run lint
+
+  test-frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js 
+        uses: actions/setup-node@v3
+        with:
+          node-version: latest
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies and run test
+        run: cd frontend && npm install && npm run test
+
+  build-frontend:
+    needs: [linting-frontend, test-frontend]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js 
+        uses: actions/setup-node@v3
+        with:
+          node-version: latest
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies and run test
+        run: cd frontend && npm install && npm run test
+
+      - name: build a docker
+        run: cd frontend && docker build . -t movie-frontend:latest --build-arg REACT_APP_MOVIE_API_URL=${{ secrets.REACT_APP_MOVIE_API_URL }}
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4 # More information on this action can be found below in the 'AWS Credentials' section
+        with:
+          role-to-assume: ${{ secrets.ARN }} #arn:aws:iam::685652915875:role/GitHubAction-AssumeRoleWithAction
+          aws-region: ${{ env.AWS_REGION }}
+            - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build, tag, and push docker image to Amazon ECR
+        env:
+          REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          REPOSITORY: my-ecr-repo #TODO
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          cd frontend && docker build . -t $REGISTRY/$REPOSITORY:$IMAGE_TAG --build-arg REACT_APP_MOVIE_API_URL=${{ secrets.REACT_APP_MOVIE_API_URL }}
+          docker push $REGISTRY/$REPOSITORY:$IMAGE_TAG
+
+      - name: Install kubectl
+        run: sudo apt-get update && sudo apt-get install -y kubectl
+
+      - name: Deploy application to EKS
+        run: cd frontend && kubectl apply -f k8s/
+
+
+
+
+
