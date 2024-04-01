@@ -39,7 +39,7 @@ jobs:
       - name: Install dependencies
         run: cd backend && pip install pipenv && pipenv install --dev
       - name: run test
-        run: pipenv run pytest -v
+        run: pipenv run pytest
 
 
   build-backend:
