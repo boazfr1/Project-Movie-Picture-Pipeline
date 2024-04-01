@@ -36,11 +36,8 @@ jobs:
         with:
           python-version: '3.x'
 
-      - name: Install dependencies
-        run: cd backend && pip install pipenv && pipenv install --dev
-      - name: run test
-        run: cd backend && pipenv run pytest
-
+      - name: Install dependencies and run test
+        run: cd backend && pip install pipenv && pipenv install --dev && pipenv run pytest
 
   build-backend:
     needs: [linting-backend, test-backend]
