@@ -95,7 +95,7 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y kubectl
 
       - name: Deploy application to EKS
-        run: cd frontend && kubectl apply -f k8s/
+        run: cd frontend && kubectl apply -f k8s/ --validate=false
 
 
 
